@@ -1,4 +1,3 @@
-// Copyright 2022 NNTU-CS
 #include <iostream>
 #include <fstream>
 #include <locale>
@@ -8,107 +7,121 @@
 #include "tree.h"
 
 PMTree::PMTree(const std::vector<char>& data) {
-  root = new Node();
-  build(root, data);
+  data_ = data;
+  root_ = new PMNode('\0');
+  buildTree(root_, data);
 }
 
-void PMTree::build(Node* node, std::vector<char> elems) {
-  if (elems.empty())
-    return;
-
-  for (size_t i = 0; i < elems.size(); i++) {
-    Node* child = new Node(elems[i]);
-
-    node->children.push_back(child);
-
-    std::vector<char> next = elems;
-    next.erase(next.begin() + i);
-
-    build(child, next);
-  }
+PMTree::~PMTree() {
+  deleteTree(root_);
 }
 
-void PMTree::clear(Node* node) {
-  if (!node)
+PMNode* PMTree::getRoot() const {
+  return root_;
+}
+
+const std::vector<char>& PMTree::getData() const {
+  return data_;
+}
+
+void PMTree::deleteTree(PMNode* node) {
+  if (node == nullptr)
     return;
 
-  for (Node* child : node->children)
-    clear(child);
+  for (PMNode* child : node->children)
+    deleteTree(child);
 
   delete node;
 }
 
-PMTree::~PMTree() {
-  clear(root);
+void PMTree::buildTree(PMNode* node,
+                       const std::vector<char>& remain) {
+  if (remain.empty())
+    return;
+
+  for (size_t i = 0; i < remain.size(); i++) {
+    PMNode* child = new PMNode(remain[i]);
+    node->children.push_back(child);
+
+    std::vector<char> next = remain;
+    next.erase(next.begin() + i);
+
+    buildTree(child, next);
+  }
 }
 
-static void dfs(Node* node,
-                std::vector<char>& current,
-                std::vector<std::vector<char>>& result) {
+namespace {
+
+void dfsPerms(PMNode* node,
+              std::vector<char>* current,
+              std::vector<std::vector<char>>* result) {
   if (node->value != '\0')
-    current.push_back(node->value);
+    current->push_back(node->value);
 
   if (node->children.empty()) {
-    if (!current.empty())
-      result.push_back(current);
+    if (!current->empty())
+      result->push_back(*current);
   } else {
-    for (Node* child : node->children)
-      dfs(child, current, result);
+    for (PMNode* child : node->children)
+      dfsPerms(child, current, result);
   }
 
   if (node->value != '\0')
-    current.pop_back();
+    current->pop_back();
 }
 
-std::vector<std::vector<char>> getAllPerms(PMTree& tree) {
-  std::vector<std::vector<char>> result;
-  std::vector<char> current;
+long long factorial(int n) {
+  long long result = 1;
 
-  dfs(tree.root, current, result);
+  for (int i = 2; i <= n; i++)
+    result *= i;
 
   return result;
 }
 
-std::vector<char> getPerm1(PMTree& tree, int num) {
+}  // namespace
+
+std::vector<std::vector<char>> getAllPerms(const PMTree& tree) {
+  std::vector<std::vector<char>> result;
+  std::vector<char> current;
+
+  dfsPerms(tree.getRoot(), &current, &result);
+
+  return result;
+}
+
+std::vector<char> getPerm1(const PMTree& tree, int num) {
   std::vector<std::vector<char>> perms = getAllPerms(tree);
 
   if (num < 1 || num > static_cast<int>(perms.size()))
-    return {};
+    return std::vector<char>();
 
   return perms[num - 1];
 }
 
-static int factorial(int n) {
-  int res = 1;
+std::vector<char> getPerm2(const PMTree& tree, int num) {
+  const std::vector<char>& source = tree.getData();
 
-  for (int i = 2; i <= n; i++)
-    res *= i;
-
-  return res;
-}
-
-std::vector<char> getPerm2(PMTree& tree, int num) {
-  std::vector<char> result;
-
-  int n = static_cast<int>(tree.root->children.size());
+  int n = static_cast<int>(source.size());
 
   if (num < 1 || num > factorial(n))
-    return {};
+    return std::vector<char>();
 
-  num--;
+  std::vector<char> available = source;
+  std::vector<char> result;
 
-  Node* current = tree.root;
+  int k = num - 1;
 
-  for (int remain = n; remain > 0; remain--) {
-    int block = factorial(remain - 1);
+  for (int pos = n; pos > 0; pos--) {
+    long long blockSize = factorial(pos - 1);
 
-    int index = num / block;
+    int index = k / blockSize;
 
-    num %= block;
+    result.push_back(available[index]);
 
-    current = current->children[index];
+    available.erase(available.begin() + index);
 
-    result.push_back(current->value);
+    k %= blockSize;
   }
 
   return result;
