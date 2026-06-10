@@ -1,8 +1,11 @@
+// Copyright 2025 NNTU-CS
+
 #include <iostream>
 #include <fstream>
 #include <locale>
 #include <cstdlib>
 #include <vector>
+#include <cstdint>
 
 #include "tree.h"
 
@@ -70,8 +73,8 @@ void dfsPerms(PMNode* node,
     current->pop_back();
 }
 
-long long factorial(int n) {
-  long long result = 1;
+int64_t factorial(int n) {
+  int64_t result = 1;
 
   for (int i = 2; i <= n; i++)
     result *= i;
@@ -113,15 +116,15 @@ std::vector<char> getPerm2(const PMTree& tree, int num) {
   int k = num - 1;
 
   for (int pos = n; pos > 0; pos--) {
-    long long blockSize = factorial(pos - 1);
+    int64_t block_size = factorial(pos - 1);
 
-    int index = k / blockSize;
+    int index = static_cast<int>(k / block_size);
 
     result.push_back(available[index]);
 
     available.erase(available.begin() + index);
 
-    k %= blockSize;
+    k %= static_cast<int>(block_size);
   }
 
   return result;
